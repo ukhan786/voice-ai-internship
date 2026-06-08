@@ -31,10 +31,92 @@ export function getDb(): Database.Database {
   db.pragma("foreign_keys = ON");
 
   createSchema(db);
+  migrate(db);
   seedIfEmpty(db);
+  syncWeeksContent(db); // keep week content in sync with the curriculum
 
   _db = db;
   return db;
+}
+
+/**
+ * Lightweight migrations for databases created by an earlier version. Adds any
+ * missing columns so existing files (e.g. your local data/app.db) keep working
+ * without a reset.
+ */
+function migrate(db: Database.Database) {
+  const cols = (db.prepare("pragma table_info(weeks)").all() as { name: string }[]).map(
+    (c) => c.name,
+  );
+  const add = (name: string) => {
+    if (!cols.includes(name)) {
+      db.exec(`alter table weeks add column ${name} text not null default ''`);
+    }
+  };
+  add("ai_concept_title");
+  add("ai_concept_body");
+  add("key_term");
+  add("key_term_def");
+  add("resource_label");
+  add("resource_url");
+  add("deliverable");
+  // phase column needs integer type; SQLite allows adding it as text default
+  if (!cols.includes("phase")) {
+    db.exec(`alter table weeks add column phase integer not null default 1`);
+  }
+}
+
+/**
+ * Weeks are reference content (not user data), so we upsert them from the
+ * curriculum on every boot. This refreshes primers / AI concepts for existing
+ * databases without touching tasks, reflections, scores, or XP.
+ */
+function syncWeeksContent(db: Database.Database) {
+  const upsert = db.prepare(`insert into weeks
+    (week_no, title, theme, phase, start_date, end_date, objective, deliverable,
+     primer_title, primer_body,
+     ai_concept_title, ai_concept_body, key_term, key_term_def, resource_label, resource_url,
+     reflection_prompt, milestone_label)
+    values
+    (@week_no, @title, @theme, @phase, @start_date, @end_date, @objective, @deliverable,
+     @primer_title, @primer_body,
+     @ai_concept_title, @ai_concept_body, @key_term, @key_term_def, @resource_label, @resource_url,
+     @reflection_prompt, @milestone_label)
+    on conflict(week_no) do update set
+      title=excluded.title, theme=excluded.theme, phase=excluded.phase,
+      start_date=excluded.start_date, end_date=excluded.end_date,
+      objective=excluded.objective, deliverable=excluded.deliverable,
+      primer_title=excluded.primer_title, primer_body=excluded.primer_body,
+      ai_concept_title=excluded.ai_concept_title, ai_concept_body=excluded.ai_concept_body,
+      key_term=excluded.key_term, key_term_def=excluded.key_term_def,
+      resource_label=excluded.resource_label, resource_url=excluded.resource_url,
+      reflection_prompt=excluded.reflection_prompt, milestone_label=excluded.milestone_label`);
+
+  const tx = db.transaction(() => {
+    for (const w of CURRICULUM) {
+      upsert.run({
+        week_no: w.week_no,
+        title: w.title,
+        theme: w.theme,
+        phase: w.phase,
+        start_date: w.start_date,
+        end_date: w.end_date,
+        objective: w.objective,
+        deliverable: w.deliverable,
+        primer_title: w.primer_title,
+        primer_body: w.primer_body,
+        ai_concept_title: w.ai_concept_title,
+        ai_concept_body: w.ai_concept_body,
+        key_term: w.key_term,
+        key_term_def: w.key_term_def,
+        resource_label: w.resource_label,
+        resource_url: w.resource_url,
+        reflection_prompt: w.reflection_prompt,
+        milestone_label: w.milestone_label,
+      });
+    }
+  });
+  tx();
 }
 
 function createSchema(db: Database.Database) {
@@ -51,11 +133,19 @@ function createSchema(db: Database.Database) {
       week_no            integer primary key,
       title              text not null,
       theme              text not null,
+      phase              integer not null default 1,
       start_date         text not null,
       end_date           text not null,
       objective          text not null,
+      deliverable        text not null default '',
       primer_title       text not null,
       primer_body        text not null,
+      ai_concept_title   text not null default '',
+      ai_concept_body    text not null default '',
+      key_term           text not null default '',
+      key_term_def       text not null default '',
+      resource_label     text not null default '',
+      resource_url       text not null default '',
       reflection_prompt  text not null,
       milestone_label    text
     );

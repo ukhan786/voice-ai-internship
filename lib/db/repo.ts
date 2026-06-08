@@ -267,11 +267,11 @@ export function recomputeGamification(profileId: string): void {
 
   const earned: string[] = [];
   if (doneCount >= 1) earned.push("first_steps");
-  if (weeksComplete([1, 2])) earned.push("enterprise_thinker");
-  if (weeksComplete([3, 4])) earned.push("rfp_analyst");
-  if (weeksComplete([5, 6])) earned.push("data_foundations");
-  if (weeksComplete([7, 8])) earned.push("business_case_builder");
-  if (weeksComplete([9, 10])) earned.push("presenter");
+  if (weeksComplete([1, 2])) earned.push("enterprise_thinker");       // Phase 1
+  if (weeksComplete([3, 4])) earned.push("rfp_analyst");              // Phase 2
+  if (weeksComplete([5, 6, 7])) earned.push("data_foundations");      // Phase 3
+  if (weeksComplete([8, 9, 10])) earned.push("business_case_builder"); // Phase 4
+  if (weekComplete(10)) earned.push("presenter");
   if (fullyScored) earned.push("scorekeeper");
   if (submitted >= 5) earned.push("reflective_practitioner");
   if (weeksComplete([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])) earned.push("journey_complete");

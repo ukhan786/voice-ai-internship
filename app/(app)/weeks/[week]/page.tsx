@@ -11,6 +11,7 @@ import { weekProgress } from "@/lib/progress";
 import TaskList from "@/components/TaskList";
 import ReflectionForm from "@/components/ReflectionForm";
 import ConceptPrimer from "@/components/ConceptPrimer";
+import AiConceptCard from "@/components/AiConceptCard";
 
 export const dynamic = "force-dynamic";
 
@@ -88,6 +89,12 @@ export default async function WeekDetailPage({
           <span className="label">Learning Objective</span>
           <p className="mt-1 text-sm text-steel-200">{week.objective}</p>
         </div>
+        {week.deliverable && (
+          <div className="mt-3 rounded-lg border border-accent/25 bg-accent/5 px-4 py-3">
+            <span className="label text-accent">Deliverable</span>
+            <p className="mt-1 text-sm text-steel-200">{week.deliverable}</p>
+          </div>
+        )}
         {week.milestone_label && (
           <p className="mt-3 rounded-lg border border-gold/30 bg-gold/5 px-3 py-2 text-xs text-gold-soft">
             ★ Milestone: {week.milestone_label}
@@ -96,6 +103,15 @@ export default async function WeekDetailPage({
       </div>
 
       <ConceptPrimer title={week.primer_title} body={week.primer_body} />
+
+      <AiConceptCard
+        title={week.ai_concept_title}
+        body={week.ai_concept_body}
+        keyTerm={week.key_term}
+        keyTermDef={week.key_term_def}
+        resourceLabel={week.resource_label}
+        resourceUrl={week.resource_url}
+      />
 
       {/* Tasks */}
       <div className="card card-pad">
